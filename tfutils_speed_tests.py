@@ -13,7 +13,7 @@ def tu_lstm_tester(op_dev, wt_dev, unroll_dev, i):
     x = tf.ones([10, 64, 512], dtype = tf.float32)
 
     name = 'test_' + str(i)
-    lstm_cell = tu.layers.LSTM(128, op_device = op_dev, wt_device = wt_dev, name = name)
+    lstm_cell = tu.layers.SlowLSTM(128, op_device = op_dev, wt_device = wt_dev, name = name)
     with tf.device(unroll_dev):
         output = tf.nn.dynamic_rnn(lstm_cell, x, dtype = tf.float32)
 
