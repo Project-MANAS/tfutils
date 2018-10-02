@@ -18,69 +18,59 @@ def normc_initializer(std = 1.0):
     return _initializer
 
 
-def _conv_warning(data_format, op_device):
-    if data_format == "NHWC" and op_device == '/gpu:0':
-        warnings.warn("Consider using NCHW data format for faster training on GPUs", RuntimeWarning)
+def _conv_warning(gpu_format, cpu_format, data_format, op_device):
+    if data_format == cpu_format and op_device == '/gpu:0':
+        warnings.warn("Consider using", gpu_format, "data format for faster training on GPUs", RuntimeWarning)
 
-    if data_format == "NCHW" and op_device == '/cpu:0':
-        raise RuntimeError("NCHW not supported on CPU")
+    if data_format == gpu_format and op_device == '/cpu:0':
+        raise RuntimeError(gpu_format, "not supported on CPU")
 
 
-def conv2d(x, name, num_filters, filter_size = (3, 3), stride = (1, 1), pad = "SAME", dilations = (1, 1),
-           data_format = "NCHW", wt_device = DEFAULT_DEVICE, op_device = DEFAULT_DEVICE, reuse = tf.AUTO_REUSE,
-           summary = None):
-    _conv_warning(data_format, op_device)
+def conv2d(x, name, num_filters, filter_size, stride = (1, 1), pad = "SAME", dilations = (1, 1),
+           data_format = "NCHW", wt_device = DEFAULT_DEVICE, op_device = DEFAULT_DEVICE, reuse = tf.AUTO_REUSE):
 
+    _conv_warning("NCHW", "NHWC", data_format, op_device)
     assert len(filter_size) == 2
     assert len(stride) == 2
     assert len(dilations) == 2
 
-    stride = [1, *stride, 1]
-    dilations = [1, *dilations, 1]
+    stride = [1, *stride, 1] if data_format == "NHWC" else [1, 1, *stride]
+    dilations = [1, *dilations, 1] if data_format == "NCHW" else [1, 1, *stride]
 
     channel_idx = 1 if data_format == "NCHW" else 3
     b_shape = [1, 1, 1, 1]
     b_shape[channel_idx] = num_filters
     w_shape = [*filter_size, int(x.get_shape()[channel_idx]), num_filters]
 
-    with tf.variable_scope(name, reuse = reuse):
+    with tf.variable_scope(name, caching_device = op_device, reuse = reuse):
         with tf.device(wt_device):
             w = tf.get_variable("W", w_shape, tf.float32, tf.glorot_normal_initializer())
             b = tf.get_variable("b", b_shape, tf.float32, tf.zeros_initializer())
-
-        if summary is not None:
-            tf.summary.image(summary,
-                             tf.transpose(tf.reshape(w, [filter_size[0], filter_size[1], -1, 1]),
-                                          [2, 0, 1, 3]),
-                             max_images = 10)
 
         with tf.device(op_device):
             return tf.nn.conv2d(x, w, stride, pad, data_format = data_format, dilations = dilations) + b
 
 
-def conv3d(x, name, num_filters, filter_size = (3, 3, 3), stride = (1, 1, 1), pad = "SAME", dilations = (1, 1, 1),
-           data_format = "NDCHW", wt_device = DEFAULT_DEVICE, op_device = DEFAULT_DEVICE, reuse = tf.AUTO_REUSE,
-           summary = None):
-    _conv_warning(data_format, op_device)
+def conv3d(x, name, num_filters, filter_size, stride = (1, 1, 1), pad = "SAME", dilations = (1, 1, 1),
+           data_format = "NCDHW", wt_device = DEFAULT_DEVICE, op_device = DEFAULT_DEVICE, reuse = tf.AUTO_REUSE):
 
+    _conv_warning("NCDHW", "NDHWC", data_format, op_device)
     assert len(filter_size) == 3
     assert len(stride) == 3
     assert len(dilations) == 3
 
-    stride = [1, *stride, 1]
-    dilations = [1, *dilations, 1]
+    stride = [1, *stride, 1] if data_format == "NDHWC" else [1, 1, *stride]
+    dilations = [1, *dilations, 1] if data_format == "NDHWC" else [1, 1, *dilations]
 
     channel_idx = 1 if data_format == "NCDHW" else 4
     b_shape = [1, 1, 1, 1, 1]
     b_shape[channel_idx] = num_filters
     w_shape = [*filter_size, int(x.get_shape()[channel_idx]), num_filters]
 
-    with tf.variable_scope(name, reuse = reuse):
+    with tf.variable_scope(name, caching_device = op_device, reuse = reuse):
         with tf.device(wt_device):
             w = tf.get_variable("W", w_shape, tf.float32, tf.glorot_normal_initializer())
             b = tf.get_variable("b", b_shape, tf.float32, tf.zeros_initializer())
-
-        # TODO (Squadrick): Add summary hook for conv3d
 
         with tf.device(op_device):
             return tf.nn.conv3d(x, w, stride, pad, data_format, dilations) + b
@@ -88,7 +78,7 @@ def conv3d(x, name, num_filters, filter_size = (3, 3, 3), stride = (1, 1, 1), pa
 
 def dense(x, name, size, bias = True, wt_device = DEFAULT_DEVICE, op_device = DEFAULT_DEVICE,
           reuse = tf.AUTO_REUSE):
-    with tf.variable_scope(name, reuse = reuse):
+    with tf.variable_scope(name, caching_device = op_device, reuse = reuse):
         with tf.device(wt_device):
             w = tf.get_variable("W", [x.get_shape()[1], size], initializer = tf.glorot_normal_initializer())
             if bias:
@@ -101,7 +91,7 @@ def dense(x, name, size, bias = True, wt_device = DEFAULT_DEVICE, op_device = DE
 
 def dense_wn(x, name, size, wt_device = DEFAULT_DEVICE, op_device = DEFAULT_DEVICE,
              reuse = tf.AUTO_REUSE, init_scale = 1.0):
-    with tf.variable_scope(name, reuse = reuse):
+    with tf.variable_scope(name, caching_device = op_device, reuse = reuse):
         with tf.device(wt_device):
             v = tf.get_variable("V", [int(x.get_shape()[1]), size], initializer = tf.random_normal_initializer(0, 0.05))
             g = tf.get_variable("g", [size], initializer = tf.constant_initializer(init_scale))
