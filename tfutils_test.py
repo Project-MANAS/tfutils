@@ -77,7 +77,7 @@ class Conv2DTest(unittest.TestCase):
 class Conv3dTest(unittest.TestCase):
     def test1(self):
         x = tf.placeholder(tf.float32, [1, 3, 25, 192, 128])
-        x = tu.layers.conv3d(x, '3d_test1', 16, data_format = "NCDHW")
+        x = tu.layers.conv3d(x, '3d_test1', 16, (3, 3, 3), data_format = "NCDHW")
         with tf.Session() as sess:
             shape = sess.run(tf.shape(x))
         self.assertEqual(shape[2], 25)
@@ -85,7 +85,7 @@ class Conv3dTest(unittest.TestCase):
     def test2(self):
         def test2(self):
             x = tf.placeholder(tf.float32, [1, 25, 192, 128, 3])
-            x = tu.layers.conv3d(x, '3d_test2', 16, data_format = "NDHWC")
+            x = tu.layers.conv3d(x, '3d_test2', 16, (3, 3, 3), data_format = "NDHWC")
             with tf.Session() as sess:
                 shape = sess.run(tf.shape(x))
             self.assertEqual(shape[4], 25)

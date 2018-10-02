@@ -20,10 +20,10 @@ def normc_initializer(std = 1.0):
 
 def _conv_warning(gpu_format, cpu_format, data_format, op_device):
     if data_format == cpu_format and op_device == '/gpu:0':
-        warnings.warn("Consider using", gpu_format, "data format for faster training on GPUs", RuntimeWarning)
+        warnings.warn("Consider using " + gpu_format + " data format for faster training on GPUs", RuntimeWarning)
 
     if data_format == gpu_format and op_device == '/cpu:0':
-        raise RuntimeError(gpu_format, "not supported on CPU")
+        raise RuntimeError(gpu_format + " not supported on CPU")
 
 
 def conv2d(x, name, num_filters, filter_size, stride = (1, 1), pad = "SAME", dilations = (1, 1),
@@ -35,7 +35,7 @@ def conv2d(x, name, num_filters, filter_size, stride = (1, 1), pad = "SAME", dil
     assert len(dilations) == 2
 
     stride = [1, *stride, 1] if data_format == "NHWC" else [1, 1, *stride]
-    dilations = [1, *dilations, 1] if data_format == "NCHW" else [1, 1, *stride]
+    dilations = [1, *dilations, 1] if data_format == "NCHW" else [1, 1, *dilations]
 
     channel_idx = 1 if data_format == "NCHW" else 3
     b_shape = [1, 1, 1, 1]
