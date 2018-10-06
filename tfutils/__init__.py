@@ -1,3 +1,3 @@
-from . import session, vectors, layers, scope
+from . import vectors, layers, meta
 
 # TODO (Squadrick): Add documentation
