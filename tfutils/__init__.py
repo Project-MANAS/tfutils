@@ -1,3 +1,3 @@
-from . import vectors, layers, meta
+from . import vectors, layers, meta, training
 
 # TODO (Squadrick): Add documentation
